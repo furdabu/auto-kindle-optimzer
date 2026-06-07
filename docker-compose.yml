@@ -1,0 +1,17 @@
+services:
+  auto-kindle-optimizer:
+    build: .
+    image: auto-kindle-optimizer:latest
+    container_name: auto-kindle-optimizer
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-3847}:3847"
+    environment:
+      PORT: 3847
+      DATA_DIR: /app/data
+      TMP_DIR: /app/tmp
+    volumes:
+      - ./data:/app/data
+      - ./tmp:/app/tmp

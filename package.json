@@ -1,0 +1,30 @@
+{
+  "name": "auto-kindle-optimizer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "iPhone/iPad の Share から PDF を受け取り KCC で Kindle 向けに変換し Send to Kindle メールで配信するツール",
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node --import tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.4",
+    "better-sqlite3": "^12.10.0",
+    "hono": "^4.12.23",
+    "nodemailer": "^8.0.10",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.9.2",
+    "@types/nodemailer": "^8.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
