@@ -4,15 +4,15 @@ FROM node:22-bookworm
 # Kindle Paperwhite 12 用の KPW6 プロファイルは KCC v9.7.2 以降で利用可能。
 # PyPI の headless 版は古く KPW6 を含まないため、公式タグから venv にインストールする。
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-pip python3-venv \
-      p7zip-full \
-      libpng16-16 libjpeg62-turbo \
-    && rm -rf /var/lib/apt/lists/*
+  python3 python3-pip python3-venv \
+  p7zip-full \
+  libpng16-16 libjpeg62-turbo \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m venv /opt/kcc-venv \
-    && /opt/kcc-venv/bin/pip install --no-cache-dir \
-       "git+https://github.com/ciromattia/kcc.git@v9.7.2" \
-       packaging
+  && /opt/kcc-venv/bin/pip install --no-cache-dir \
+  "git+https://github.com/ciromattia/kcc.git@v9.7.2" \
+  packaging
 ENV PATH="/opt/kcc-venv/bin:${PATH}"
 
 # --- アプリケーション ---
@@ -23,7 +23,7 @@ RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile \
-    && pnpm rebuild better-sqlite3
+  && pnpm rebuild better-sqlite3
 
 COPY tsconfig.json ./
 COPY src ./src
