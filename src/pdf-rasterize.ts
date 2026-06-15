@@ -33,14 +33,13 @@ function buildRasterArgs(inputPath: string, outputPrefix: string): string[] {
   if (config.PDF_RASTER_MODE === "scale") {
     const resolution = getProfileResolution(config.KCC_PROFILE);
     if (resolution) {
-      const [profileWidth, profileHeight] = resolution;
+      const [, profileHeight] = resolution;
       const multiplier = config.PDF_RASTER_SCALE_MULTIPLIER;
-      const spreadWidth = config.KCC_MANGA_STYLE ? profileWidth * 2 : profileWidth;
-      const scaleToX = Math.round(spreadWidth * multiplier);
+      // KCC の MuPDF レンダリングと同様、高さ基準でスケールする（-scale-to-x/-scale-to-y 併用は回転 PDF で縦横が入れ替わる）
       const scaleToY = Math.round(profileHeight * multiplier);
-      args.push("-scale-to-x", String(scaleToX), "-scale-to-y", String(scaleToY));
+      args.push("-scale-to-y", String(scaleToY), "-scale-to-x", "-1");
       console.log(
-        `[rasterize] プロファイル ${config.KCC_PROFILE} に合わせて ${scaleToX}x${scaleToY}px 以内でレンダリング`,
+        `[rasterize] プロファイル ${config.KCC_PROFILE} に合わせて高さ ${scaleToY}px（幅はアスペクト比維持）でレンダリング`,
       );
     } else {
       args.push("-r", String(config.PDF_RASTER_DPI));

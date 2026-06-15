@@ -123,13 +123,13 @@ kcc-c2e -p KPW6 -f EPUB -m -u --forcepng -r 1 -t "<タイトル>" -o <出力先>
 2. 失敗した場合、`pdftoppm` で全ページを PNG にラスタライズする
 3. 生成した画像フォルダを入力として、同じ KCC 設定で再変換する
 
-画像化は既定で **scale モード** を使い、`KCC_PROFILE` の解像度（KPW6 なら 1272x1696）に `PDF_RASTER_SCALE_MULTIPLIER`（既定 `2`）を掛けたピクセルサイズ以内でレンダリングします。マンガモード（`KCC_MANGA_STYLE=true`）のときは見開き幅を考慮して横方向を2倍にします（KPW6 の場合、最大 5088x3392px 以内）。
+画像化は既定で **scale モード** を使い、`KCC_PROFILE` の高さ（KPW6 なら 1696px）に `PDF_RASTER_SCALE_MULTIPLIER`（既定 `2`）を掛けたピクセル高さでレンダリングします。幅は PDF ページのアスペクト比を維持するため、見開きページでも縦横が入れ替わりません。
 
 直接変換とフォールバックの両方が失敗した場合のみ、ジョブは `failed` になります。フォールバックは処理時間と一時ディスク使用量が増える点に注意してください。
 
 ```bash
-# フォールバック時のイメージ（Docker 内、KPW6 + マンガモード + 倍率2）
-pdftoppm -png -scale-to-x 5088 -scale-to-y 3392 <入力PDF> <作業ディレクトリ>/raster/page
+# フォールバック時のイメージ（Docker 内、KPW6 + 倍率2）
+pdftoppm -png -scale-to-y 3392 -scale-to-x -1 <入力PDF> <作業ディレクトリ>/raster/page
 kcc-c2e -p KPW6 -f EPUB -m -u --forcepng -r 1 -t "<タイトル>" -o <出力先> <作業ディレクトリ>/raster
 ```
 

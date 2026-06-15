@@ -24,7 +24,7 @@ const envSchema = z.object({
   PDF_RASTER_BIN: z.string().default("pdftoppm"),
   // scale: KCC プロファイル解像度に合わせてピクセル指定（推奨） / dpi: 固定 DPI
   PDF_RASTER_MODE: z.enum(["scale", "dpi"]).default("scale"),
-  // scale モード時にプロファイル解像度へ掛ける倍率（2 = 端末解像度の2倍でラスタライズ）
+  // scale モード時にプロファイル高さへ掛ける倍率（2 = 端末高さの2倍でラスタライズ）
   PDF_RASTER_SCALE_MULTIPLIER: z.coerce.number().positive().default(2),
   // dpi モード時の解像度。scale モードでプロファイル不明時のフォールバックにも使用
   PDF_RASTER_DPI: z.coerce.number().int().positive().default(400),
