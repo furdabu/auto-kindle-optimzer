@@ -21,6 +21,9 @@ const envSchema = z.object({
   KCC_FORCE_PNG: boolFromEnv.default(true),
   KCC_TIMEOUT_MS: z.coerce.number().int().positive().default(20 * 60 * 1000),
 
+  PDF_RASTER_BIN: z.string().default("pdftoppm"),
+  PDF_RASTER_DPI: z.coerce.number().int().positive().default(200),
+
   KINDLE_EMAIL: z.email("KINDLE_EMAIL は有効なメールアドレスである必要があります"),
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(587),

@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
-import { readdir } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.js";
+import { rasterizePdf } from "./pdf-rasterize.js";
 
 const FORMAT_EXTENSIONS: Record<string, string> = {
   EPUB: ".epub",
@@ -25,6 +26,7 @@ function buildArgs(inputPath: string, outputDir: string, title: string): string[
 
 /**
  * kcc-c2e を実行し PDF を Kindle 向けフォーマットに変換する。
+ * 直接変換に失敗した場合は PDF を画像化してから再変換する。
  * 生成されたファイルの絶対パスを返す。
  */
 export async function convert(
@@ -32,10 +34,42 @@ export async function convert(
   outputDir: string,
   title: string,
 ): Promise<string> {
-  const args = buildArgs(inputPath, outputDir, title);
+  let primaryError: Error | undefined;
 
-  await runKcc(args);
+  try {
+    await runKcc(buildArgs(inputPath, outputDir, title));
+  } catch (err) {
+    primaryError = err instanceof Error ? err : new Error(String(err));
+    console.warn(`[kcc] 直接変換に失敗: ${primaryError.message.split("\n")[0]}`);
+    console.log("[kcc] PDF を画像化して再変換します");
 
+    const jobDir = path.dirname(outputDir);
+    const rasterDir = path.join(jobDir, "raster");
+
+    await rm(rasterDir, { recursive: true, force: true }).catch(() => {});
+    await rm(outputDir, { recursive: true, force: true }).catch(() => {});
+    await mkdir(outputDir, { recursive: true });
+
+    try {
+      await rasterizePdf(inputPath, rasterDir);
+      await runKcc(buildArgs(rasterDir, outputDir, title));
+    } catch (fallbackErr) {
+      const fallbackMessage =
+        fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+      throw new Error(
+        [
+          "KCC 変換に失敗しました（直接変換・画像化フォールバックの両方）",
+          `直接変換: ${primaryError.message}`,
+          `フォールバック: ${fallbackMessage}`,
+        ].join("\n"),
+      );
+    }
+  }
+
+  return findOutputFile(outputDir);
+}
+
+async function findOutputFile(outputDir: string): Promise<string> {
   const expectedExt = FORMAT_EXTENSIONS[config.KCC_FORMAT.toUpperCase()] ?? ".epub";
   const entries = await readdir(outputDir);
   const produced = entries.find((name) =>
