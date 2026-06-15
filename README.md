@@ -2,6 +2,8 @@
 
 iPhone / iPad の共有シート（Share Sheet）から PDF を送信すると、自宅サーバーが [KCC (Kindle Comic Converter)](https://github.com/ciromattia/kcc) で Kindle 向けに最適化した EPUB に変換し、Send to Kindle メールで Kindle 端末へ自動配信するツールです。
 
+
+
 ## 処理フロー
 
 ```
@@ -10,15 +12,20 @@ iPhone/iPad の Share
    ▼
 Hono API ──► SQLite ジョブキュー ──► ワーカー
                                        │  kcc-c2e で EPUB 変換
+                                       │    ├─ 成功 → 配信へ
+                                       │    └─ 失敗 → pdftoppm で全ページを PNG 化
+                                       │              → 画像フォルダを kcc-c2e で再変換
                                        ▼
                                   Send to Kindle メール送信 (SMTP)
                                        ▼
                                    Kindle 端末
 ```
 
+KCC v9.7.2 以降は PDF を MuPDF で並列処理しますが、PDF の内容によっては KCC 公式 GUI でも失敗することがあります。その場合、本ツールは自動的に `pdftoppm` で全ページを画像化し、画像フォルダを入力として KCC 変換を再試行します。
+
 ## 必要なもの
 
-- Docker / Docker Compose（KCC と Node ランタイムを同梱）
+- Docker / Docker Compose（KCC・poppler-utils・Node ランタイムを同梱）
 - Send to Kindle メールアドレス（端末ごとの `@kindle.com`）
 - 送信に使う SMTP アカウント（例: Gmail のアプリパスワード）
 - iPhone / iPad（ショートカットアプリ）
@@ -47,8 +54,9 @@ cp .env.example .env
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | 送信元 SMTP の認証情報 |
 | `SMTP_FROM` | Amazon の承認済みリストに登録した送信元アドレス |
 | `KCC_PROFILE` | デバイスプロファイル（既定 `KPW6` = Kindle Paperwhite 12） |
+| `PDF_RASTER_DPI` | フォールバック時の PDF 画像化解像度（既定 `200`） |
 
-その他の KCC 変換オプションは `.env.example` のコメントを参照してください。
+その他の KCC 変換オプションや PDF 画像化設定（`PDF_RASTER_BIN` など）は `.env.example` のコメントを参照してください。
 
 ### 3. 起動
 
@@ -109,6 +117,20 @@ kcc-c2e -p KPW6 -f EPUB -m -u --forcepng -r 1 -t "<タイトル>" -o <出力先>
 - `--forcepng`: PNG で出力
 - `-r 1`: 見開きページを回転（`KCC_SPLITTER` で 0=分割 / 1=回転 / 2=両方）
 
+### PDF 変換フォールバック
+
+1. まず上記設定で PDF を直接 `kcc-c2e` に渡す
+2. 失敗した場合、`pdftoppm` で全ページを PNG にラスタライズする（`PDF_RASTER_DPI`、既定 200 DPI）
+3. 生成した画像フォルダを入力として、同じ KCC 設定で再変換する
+
+直接変換とフォールバックの両方が失敗した場合のみ、ジョブは `failed` になります。フォールバックは処理時間と一時ディスク使用量が増える点に注意してください。
+
+```bash
+# フォールバック時のイメージ（Docker 内）
+pdftoppm -png -r 200 <入力PDF> <作業ディレクトリ>/raster/page
+kcc-c2e -p KPW6 -f EPUB -m -u --forcepng -r 1 -t "<タイトル>" -o <出力先> <作業ディレクトリ>/raster
+```
+
 ## 制約
 
 - 送信元は Amazon の承認済みリストに登録が必要
@@ -118,7 +140,7 @@ kcc-c2e -p KPW6 -f EPUB -m -u --forcepng -r 1 -t "<タイトル>" -o <出力先>
 
 ## ローカル開発（Docker を使わない場合）
 
-KCC（`kcc-c2e`）が PATH 上にある環境で:
+KCC（`kcc-c2e`）と PDF 画像化用の `pdftoppm`（poppler-utils）が PATH 上にある環境で:
 
 ```bash
 pnpm install
