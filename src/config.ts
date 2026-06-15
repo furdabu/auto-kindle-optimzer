@@ -22,7 +22,12 @@ const envSchema = z.object({
   KCC_TIMEOUT_MS: z.coerce.number().int().positive().default(20 * 60 * 1000),
 
   PDF_RASTER_BIN: z.string().default("pdftoppm"),
-  PDF_RASTER_DPI: z.coerce.number().int().positive().default(200),
+  // scale: KCC プロファイル解像度に合わせてピクセル指定（推奨） / dpi: 固定 DPI
+  PDF_RASTER_MODE: z.enum(["scale", "dpi"]).default("scale"),
+  // scale モード時にプロファイル解像度へ掛ける倍率（2 = 端末解像度の2倍でラスタライズ）
+  PDF_RASTER_SCALE_MULTIPLIER: z.coerce.number().positive().default(2),
+  // dpi モード時の解像度。scale モードでプロファイル不明時のフォールバックにも使用
+  PDF_RASTER_DPI: z.coerce.number().int().positive().default(400),
 
   KINDLE_EMAIL: z.email("KINDLE_EMAIL は有効なメールアドレスである必要があります"),
   SMTP_HOST: z.string().min(1),

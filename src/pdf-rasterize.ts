@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.js";
+import { getProfileResolution } from "./kcc-profiles.js";
 
 /**
  * PDF の全ページを PNG 画像にラスタライズする。
@@ -10,14 +11,9 @@ import { config } from "./config.js";
 export async function rasterizePdf(inputPath: string, outputDir: string): Promise<void> {
   await mkdir(outputDir, { recursive: true });
   const outputPrefix = path.join(outputDir, "page");
-  const args = [
-    "-png",
-    "-r",
-    String(config.PDF_RASTER_DPI),
-    inputPath,
-    outputPrefix,
-  ];
+  const args = buildRasterArgs(inputPath, outputPrefix);
 
+  console.log(`[rasterize] ${config.PDF_RASTER_BIN} ${args.join(" ")}`);
   await runCommand(config.PDF_RASTER_BIN, args, config.KCC_TIMEOUT_MS, "PDF ラスタライズ");
 
   const entries = await readdir(outputDir);
@@ -29,6 +25,36 @@ export async function rasterizePdf(inputPath: string, outputDir: string): Promis
   }
 
   console.log(`[rasterize] ${images.length} ページを生成しました`);
+}
+
+function buildRasterArgs(inputPath: string, outputPrefix: string): string[] {
+  const args = ["-png"];
+
+  if (config.PDF_RASTER_MODE === "scale") {
+    const resolution = getProfileResolution(config.KCC_PROFILE);
+    if (resolution) {
+      const [profileWidth, profileHeight] = resolution;
+      const multiplier = config.PDF_RASTER_SCALE_MULTIPLIER;
+      const spreadWidth = config.KCC_MANGA_STYLE ? profileWidth * 2 : profileWidth;
+      const scaleToX = Math.round(spreadWidth * multiplier);
+      const scaleToY = Math.round(profileHeight * multiplier);
+      args.push("-scale-to-x", String(scaleToX), "-scale-to-y", String(scaleToY));
+      console.log(
+        `[rasterize] プロファイル ${config.KCC_PROFILE} に合わせて ${scaleToX}x${scaleToY}px 以内でレンダリング`,
+      );
+    } else {
+      args.push("-r", String(config.PDF_RASTER_DPI));
+      console.warn(
+        `[rasterize] プロファイル ${config.KCC_PROFILE} の解像度が不明なため DPI ${config.PDF_RASTER_DPI} でレンダリング`,
+      );
+    }
+  } else {
+    args.push("-r", String(config.PDF_RASTER_DPI));
+    console.log(`[rasterize] DPI ${config.PDF_RASTER_DPI} でレンダリング`);
+  }
+
+  args.push(inputPath, outputPrefix);
+  return args;
 }
 
 function runCommand(
